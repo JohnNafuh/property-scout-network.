@@ -1,123 +1,182 @@
 
-document.addEventListener("DOMContentLoaded", () => {
+// ==========================================
+// PROPERTY SCOUT NETWORK
+// Main website functionality + Supabase form
+// ==========================================
 
-  // Smooth scrolling
-  document.querySelectorAll('a[href^="#"]').forEach(link => {
-    link.addEventListener("click", event => {
-      const targetId = link.getAttribute("href");
+const SUPABASE_URL = "https://utoigfnkwglynhjghxen.supabase.co";
 
-      if (!targetId || targetId === "#") return;
+const SUPABASE_KEY = "sb_publishable_nrmSSKHwjpPQshxUa16J_w_5CGV9HcI";
 
-      const target = document.querySelector(targetId);
+const db = window.supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_KEY
+);
 
-      if (target) {
-        event.preventDefault();
+// ==========================================
+// NAVIGATION
+// ==========================================
 
-        target.scrollIntoView({
-          behavior: "smooth",
-          block: "start"
-        });
+const header = document.querySelector(".site-header");
+
+window.addEventListener("scroll", () => {
+  if (header) {
+    header.classList.toggle("scrolled", window.scrollY > 20);
+  }
+});
+
+// Smooth scrolling
+document.querySelectorAll('a[href^="#"]').forEach(link => {
+  link.addEventListener("click", event => {
+    const target = document.querySelector(link.getAttribute("href"));
+
+    if (target) {
+      event.preventDefault();
+      target.scrollIntoView({
+        behavior: "smooth",
+        block: "start"
+      });
+    }
+  });
+});
+
+// ==========================================
+// REVEAL ANIMATIONS
+// ==========================================
+
+const revealElements = document.querySelectorAll(".reveal");
+
+if ("IntersectionObserver" in window) {
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add("visible");
+        observer.unobserve(entry.target);
       }
     });
+  }, {
+    threshold: 0.12
   });
 
+  revealElements.forEach(element => observer.observe(element));
+} else {
+  revealElements.forEach(element => element.classList.add("visible"));
+}
 
-  // Header shadow on scroll
-  const header = document.querySelector(".site-header");
+// ==========================================
+// APPLICATION FORM
+// ==========================================
 
-  if (header) {
-    window.addEventListener("scroll", () => {
-      header.classList.toggle("scrolled", window.scrollY > 20);
-    }, { passive: true });
-  }
+const form = document.getElementById("scoutForm");
+const submitButton = document.getElementById("submitBtn");
+const formMessage = document.getElementById("formMessage");
 
+function getFieldValue(form, id, name) {
+  const field =
+    document.getElementById(id) ||
+    form.elements.namedItem(name);
 
-  // Reveal sections
-  const revealElements = document.querySelectorAll(
-    ".intro-grid, .process-card, .requirements-content, .requirements-image, .application-container"
-  );
+  return field ? field.value.trim() : "";
+}
 
-  if ("IntersectionObserver" in window) {
+function showMessage(message, type) {
+  if (!formMessage) return;
 
-    const observer = new IntersectionObserver(entries => {
+  formMessage.textContent = message;
+  formMessage.className = "form-message " + type;
+}
 
-      entries.forEach(entry => {
+if (form) {
+  form.addEventListener("submit", async event => {
+    event.preventDefault();
 
-        if (entry.isIntersecting) {
-          entry.target.classList.add("visible");
-          observer.unobserve(entry.target);
-        }
+    if (!form.checkValidity()) {
+      form.reportValidity();
+      return;
+    }
 
-      });
+    const platforms = Array.from(
+      form.querySelectorAll('input[name="platforms"]:checked')
+    ).map(input => input.value);
 
-    }, {
-      threshold: 0.12
-    });
+    if (platforms.length === 0) {
+      showMessage(
+        "Please select at least one social media platform.",
+        "error"
+      );
+      return;
+    }
 
-    revealElements.forEach(element => {
-      element.classList.add("reveal");
-      observer.observe(element);
-    });
+    const consentField =
+      document.getElementById("consent") ||
+      form.elements.namedItem("consent");
 
-  } else {
+    if (!consentField || !consentField.checked) {
+      showMessage(
+        "Please confirm your consent before submitting.",
+        "error"
+      );
+      return;
+    }
 
-    revealElements.forEach(element => {
-      element.classList.add("visible");
-    });
+    const application = {
+      full_name: getFieldValue(form, "fullName", "fullName"),
+      email: getFieldValue(form, "email", "email"),
+      phone: getFieldValue(form, "phone", "phone"),
+      location: getFieldValue(form, "location", "location"),
+      platforms: platforms,
+      marketplace: getFieldValue(form, "marketplace", "marketplace"),
+      experience: getFieldValue(form, "experience", "experience"),
+      social_link: getFieldValue(form, "socialLink", "socialLink"),
+      availability: getFieldValue(form, "availability", "availability"),
+      hours_per_week: getFieldValue(form, "hours", "hours"),
+      introduction: getFieldValue(form, "introduction", "introduction"),
+      consent: true
+    };
 
-  }
+    if (!application.full_name ||
+        !application.email ||
+        !application.phone ||
+        !application.location) {
+      showMessage(
+        "Please complete all required fields.",
+        "error"
+      );
+      return;
+    }
 
+    submitButton.disabled = true;
+    submitButton.textContent = "Submitting...";
 
-  // Application form validation
-  const form = document.getElementById("scoutForm");
-  const message = document.getElementById("formMessage");
+    showMessage("Submitting your application...", "loading");
 
-  if (form && message) {
+    try {
+      const { error } = await db
+        .from("applications")
+        .insert([application]);
 
-    form.addEventListener("submit", event => {
+      if (error) {
+        throw error;
+      }
 
-      event.preventDefault();
-
-      message.classList.remove("visible");
-
-      // Check selected social media platforms
-      const selectedPlatforms = form.querySelectorAll(
-        'input[name="platforms"]:checked'
+      showMessage(
+        "Your application has been submitted successfully. Thank you for your interest in Property Scout Network.",
+        "success"
       );
 
-      if (selectedPlatforms.length === 0) {
+      form.reset();
 
-        message.textContent =
-          "Please select at least one social media platform.";
+    } catch (error) {
+      console.error("Application submission error:", error);
 
-        message.classList.add("visible");
+      showMessage(
+        "We couldn't submit your application. Please try again shortly.",
+        "error"
+      );
 
-        form.querySelector('input[name="platforms"]').focus();
-
-        return;
-      }
-
-      // Check required fields
-      if (!form.checkValidity()) {
-
-        form.reportValidity();
-
-        return;
-      }
-
-      // Backend connection will be added next
-      message.textContent =
-        "Your information is complete. Online application submission will be activated once the secure registration database is connected.";
-
-      message.classList.add("visible");
-
-      message.scrollIntoView({
-        behavior: "smooth",
-        block: "nearest"
-      });
-
-    });
-
-  }
-
-});
+    } finally {
+      submitButton.disabled = false;
+      submitButton.textContent = "Submit Application";
+    }
+  });
+}
