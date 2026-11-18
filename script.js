@@ -1,11 +1,5 @@
 
-// ==========================================
-// PROPERTY SCOUT NETWORK
-// Main website functionality + Supabase form
-// ==========================================
-
 const SUPABASE_URL = "https://utoigfnkwglynhjghxen.supabase.co";
-
 const SUPABASE_KEY = "sb_publishable_nrmSSKHwjpPQshxUa16J_w_5CGV9HcI";
 
 const db = window.supabase.createClient(
@@ -25,7 +19,6 @@ window.addEventListener("scroll", () => {
   }
 });
 
-// Smooth scrolling
 document.querySelectorAll('a[href^="#"]').forEach(link => {
   link.addEventListener("click", event => {
     const target = document.querySelector(link.getAttribute("href"));
@@ -68,27 +61,51 @@ if ("IntersectionObserver" in window) {
 // ==========================================
 
 const form = document.getElementById("scoutForm");
-const submitButton = document.getElementById("submitBtn");
-const formMessage = document.getElementById("formMessage");
-
-function getFieldValue(form, id, name) {
-  const field =
-    document.getElementById(id) ||
-    form.elements.namedItem(name);
-
-  return field ? field.value.trim() : "";
-}
-
-function showMessage(message, type) {
-  if (!formMessage) return;
-
-  formMessage.textContent = message;
-  formMessage.className = "form-message " + type;
-}
 
 if (form) {
+  let isSubmitting = false;
+
+  let formMessage = document.getElementById("formMessage");
+
+  // Create a feedback area if one is missing
+  if (!formMessage) {
+    formMessage = document.createElement("div");
+    formMessage.id = "formMessage";
+    form.appendChild(formMessage);
+  }
+
+  formMessage.setAttribute("role", "status");
+  formMessage.setAttribute("aria-live", "polite");
+
+  const submitButton = document.getElementById("submitBtn");
+
+  const originalButtonText = submitButton
+    ? submitButton.textContent
+    : "Submit Application";
+
+  function showMessage(message, type) {
+    formMessage.textContent = message;
+    formMessage.className = "form-message " + type;
+    formMessage.style.display = "block";
+
+    formMessage.scrollIntoView({
+      behavior: "smooth",
+      block: "center"
+    });
+  }
+
+  function getValue(id, name) {
+    const field =
+      document.getElementById(id) ||
+      form.elements.namedItem(name);
+
+    return field ? field.value.trim() : "";
+  }
+
   form.addEventListener("submit", async event => {
     event.preventDefault();
+
+    if (isSubmitting) return;
 
     if (!form.checkValidity()) {
       form.reportValidity();
@@ -107,11 +124,9 @@ if (form) {
       return;
     }
 
-    const consentField =
-      document.getElementById("consent") ||
-      form.elements.namedItem("consent");
+    const consent = document.getElementById("consent");
 
-    if (!consentField || !consentField.checked) {
+    if (!consent || !consent.checked) {
       showMessage(
         "Please confirm your consent before submitting.",
         "error"
@@ -120,24 +135,26 @@ if (form) {
     }
 
     const application = {
-      full_name: getFieldValue(form, "fullName", "fullName"),
-      email: getFieldValue(form, "email", "email"),
-      phone: getFieldValue(form, "phone", "phone"),
-      location: getFieldValue(form, "location", "location"),
-      platforms: platforms,
-      marketplace: getFieldValue(form, "marketplace", "marketplace"),
-      experience: getFieldValue(form, "experience", "experience"),
-      social_link: getFieldValue(form, "socialLink", "socialLink"),
-      availability: getFieldValue(form, "availability", "availability"),
-      hours_per_week: getFieldValue(form, "hours", "hours"),
-      introduction: getFieldValue(form, "introduction", "introduction"),
+      full_name: getValue("fullName", "fullName"),
+      email: getValue("email", "email"),
+      phone: getValue("phone", "phone"),
+      location: getValue("location", "location"),
+      platforms,
+      marketplace: getValue("marketplace", "marketplace"),
+      experience: getValue("experience", "experience"),
+      social_link: getValue("socialLink", "socialLink"),
+      availability: getValue("availability", "availability"),
+      hours_per_week: getValue("hours", "hours"),
+      introduction: getValue("introduction", "introduction"),
       consent: true
     };
 
-    if (!application.full_name ||
-        !application.email ||
-        !application.phone ||
-        !application.location) {
+    if (
+      !application.full_name ||
+      !application.email ||
+      !application.phone ||
+      !application.location
+    ) {
       showMessage(
         "Please complete all required fields.",
         "error"
@@ -145,38 +162,55 @@ if (form) {
       return;
     }
 
-    submitButton.disabled = true;
-    submitButton.textContent = "Submitting...";
+    if (!window.supabase) {
+      showMessage(
+        "The application service is temporarily unavailable. Please try again later.",
+        "error"
+      );
+      return;
+    }
 
-    showMessage("Submitting your application...", "loading");
+    isSubmitting = true;
+
+    if (submitButton) {
+      submitButton.disabled = true;
+      submitButton.textContent = "Submitting application...";
+    }
+
+    showMessage(
+      "Your application is being submitted. Please wait...",
+      "loading"
+    );
 
     try {
       const { error } = await db
         .from("applications")
         .insert([application]);
 
-      if (error) {
-        throw error;
-      }
-
-      showMessage(
-        "Your application has been submitted successfully. Thank you for your interest in Property Scout Network.",
-        "success"
-      );
+      if (error) throw error;
 
       form.reset();
+
+      showMessage(
+        "APPLICATION RECEIVED\n\nThank you for applying to Property Scout Network. Your application has been submitted successfully. Our team will review your information and contact you regarding the next steps.",
+        "success"
+      );
 
     } catch (error) {
       console.error("Application submission error:", error);
 
       showMessage(
-        "We couldn't submit your application. Please try again shortly.",
+        "WE COULDN'T SUBMIT YOUR APPLICATION\n\nYour application was not confirmed. Please check your connection and try again. If the problem continues, contact our team.",
         "error"
       );
 
     } finally {
-      submitButton.disabled = false;
-      submitButton.textContent = "Submit Application";
+      isSubmitting = false;
+
+      if (submitButton) {
+        submitButton.disabled = false;
+        submitButton.textContent = originalButtonText;
+      }
     }
   });
 }
