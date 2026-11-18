@@ -459,6 +459,7 @@ img {
   font-size: 10px;
 }
 
+
 /* TABLET */
 
 @media (max-width: 1000px) {
@@ -654,6 +655,42 @@ img {
   .hero-actions {
     flex-direction: column;
     align-items: stretch;
+  }
+}
+
+/* INTERACTIONS */
+
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  transition: box-shadow 0.3s ease;
+}
+
+.site-header.scrolled {
+  box-shadow: 0 5px 25px rgba(0, 0, 0, 0.06);
+}
+
+.reveal {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.65s ease, transform 0.65s ease;
+}
+
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
   }
 }
 
