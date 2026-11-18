@@ -950,3 +950,42 @@ img {
     transform: none;
   }
 }
+
+/* APPLICATION SUBMISSION FEEDBACK */
+
+.form-message {
+  display: none;
+  width: 100%;
+  margin-top: 22px;
+  padding: 20px;
+  border-radius: 6px;
+  font-size: 14px;
+  line-height: 1.8;
+  white-space: pre-line;
+}
+
+.form-message.success {
+  display: block;
+  background: #edf7f0;
+  border: 1px solid #c9e5d1;
+  color: #205c35;
+}
+
+.form-message.error {
+  display: block;
+  background: #fff0f0;
+  border: 1px solid #edcccc;
+  color: #9a3030;
+}
+
+.form-message.loading {
+  display: block;
+  background: #f2f4f6;
+  border: 1px solid #dce1e5;
+  color: #344452;
+}
+
+#submitBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
